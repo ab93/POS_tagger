@@ -12,6 +12,7 @@ class HiddenMarkovModel:
         self.tag_count = tag_count if tag_count != None else {'start':0}
         self.tag_nextTag = {}
         self.eos_tag = {}
+        self.num_states = set()
 
     def updateTagNextTag(self,line):
         for i in range(len(line)-1):
@@ -41,6 +42,7 @@ class HiddenMarkovModel:
         self.tag_count['start'] += 1
         for index,item in enumerate(line):
             tag = item[-2:]
+            self.num_states.add(tag)
 
             if tag in self.tag_count:
                 self.tag_count[tag] += 1
@@ -53,8 +55,11 @@ class HiddenMarkovModel:
                 else:
                     self.eos_tag[tag] = 1
 
+        self.num_states.add('start')
+
     def updateWordTag(self,line):
         for item in line:
+            item = item.decode('utf-8')
             tag = item[-2:]
             word = item[:-3]
 
@@ -72,22 +77,35 @@ class HiddenMarkovModel:
             self.transitions[prev_tag] = {}
             for tag in self.tag_nextTag[prev_tag].keys():
                 #print prev_tag, tag, self.tag_nextTag[prev_tag][tag], self.tag_count[prev_tag], self.eos_tag.get(prev_tag,0)
-                self.transitions[prev_tag][tag] = float(self.tag_nextTag[prev_tag][tag])/float(self.tag_count[prev_tag] - self.eos_tag.get(prev_tag,0))
+                self.transitions[prev_tag][tag] = float(self.tag_nextTag[prev_tag][tag] + 1)/float(self.tag_count[prev_tag] - self.eos_tag.get(prev_tag,0) + 1)
 
-        #print self.transitions
+        #self.display()
+
+
+    def addOneSmoothing(self):
+        for prev_tag in self.num_states:
+            for tag in self.num_states:
+                if tag not in self.transitions[prev_tag]:
+                    self.transitions[prev_tag][tag] = 1.0/float(self.tag_count[prev_tag] - self.eos_tag.get(prev_tag,0) + 1)
+
+        #self.display()
 
 
     def setEmissions(self,line):
         for word in line:
+            word = word.decode('utf-8')
             #print "word:",word
-            #raw_input()
+            #print self.word_tag[word]
             if word in self.word_tag:
                 self.emissions[word] = {}
                 for tag in self.word_tag[word]:
                     self.emissions[word][tag] = float(self.word_tag[word][tag])/float(self.tag_count[tag])
+            #print self.emissions
+            #raw_input()
         #print self.emissions
         #pp = pprint.PrettyPrinter(indent=2)
         #pp.pprint(self.emissions)
+
 
     def display(self):
         pp = pprint.PrettyPrinter(indent=2)
@@ -108,7 +126,7 @@ def readData(filename,model):
             #print model.eos_tag
             #print model.word_tag
             count += 1
-            print count
+            #print count
         #print model.tag_nextTag,'\n'
         #print model.eos_tag
         #print model.tag_count
@@ -127,6 +145,7 @@ def main():
     HMM = HiddenMarkovModel()
     readData(sys.argv[1],HMM)
     writeParameters(HMM)
+    HMM.addOneSmoothing()
 
 if __name__ == '__main__':
     main()
