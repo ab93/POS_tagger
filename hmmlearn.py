@@ -3,6 +3,7 @@ __author__ = 'Avik'
 import sys
 import json
 import pprint
+import time
 
 class HiddenMarkovModel:
     def __init__(self, transitions=None, word_tag=None, tag_count=None):
@@ -77,7 +78,7 @@ class HiddenMarkovModel:
             self.transitions[prev_tag] = {}
             for tag in self.tag_nextTag[prev_tag].keys():
                 #print prev_tag, tag, self.tag_nextTag[prev_tag][tag], self.tag_count[prev_tag], self.eos_tag.get(prev_tag,0)
-                self.transitions[prev_tag][tag] = float(self.tag_nextTag[prev_tag][tag] + 1)/float(self.tag_count[prev_tag] - self.eos_tag.get(prev_tag,0) + 1)
+                self.transitions[prev_tag][tag] = float(self.tag_nextTag[prev_tag][tag] + 1)/float(self.tag_count[prev_tag] - self.eos_tag.get(prev_tag,0) + len(self.tag_count))
 
         #self.display()
 
@@ -86,7 +87,7 @@ class HiddenMarkovModel:
         for prev_tag in self.num_states:
             for tag in self.num_states:
                 if tag not in self.transitions[prev_tag]:
-                    self.transitions[prev_tag][tag] = 1.0/float(self.tag_count[prev_tag] - self.eos_tag.get(prev_tag,0) + 1)
+                    self.transitions[prev_tag][tag] = 1.0/float(self.tag_count[prev_tag] - self.eos_tag.get(prev_tag,0) + len(self.tag_count))
 
         #self.display()
 
@@ -142,10 +143,12 @@ def writeParameters(model):
         json.dump(model.tag_count,fp)
 
 def main():
+    startTime = time.time()
     HMM = HiddenMarkovModel()
     readData(sys.argv[1],HMM)
     writeParameters(HMM)
     HMM.addOneSmoothing()
+    print "TIME:",time.time()-startTime
 
 if __name__ == '__main__':
     main()
